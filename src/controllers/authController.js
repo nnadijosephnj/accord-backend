@@ -68,19 +68,29 @@ exports.getProfile = async (req, res) => {
 exports.updateProfile = async (req, res) => {
     try {
         const { name, bio, display_name } = req.body;
+        const wallet = req.wallet.toLowerCase();
+        
+        // Build update object only with provided fields
+        const updates = {};
+        if (name !== undefined) updates.name = name;
+        if (display_name !== undefined) updates.display_name = display_name;
+        if (bio !== undefined) updates.bio = bio;
+
         const { data, error } = await supabase
             .from('users')
-            .update({ 
-                name: name || undefined, 
-                display_name: display_name || undefined,
-                bio: bio || undefined 
-            })
-            .eq('wallet_address', req.wallet.toLowerCase())
+            .update(updates)
+            .eq('wallet_address', wallet)
             .select()
             .single();
-        if (error) throw error;
+
+        if (error) {
+            console.error(`Profile update failed for ${wallet}:`, error.message);
+            throw error;
+        }
+
         res.json(data);
     } catch (e) {
+        console.error("UpdateProfile Catch:", e.message);
         res.status(500).json({ error: e.message });
     }
 };
