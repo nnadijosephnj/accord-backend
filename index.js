@@ -14,6 +14,9 @@ app.use('/api/auth', authRoutes);
 app.use('/api/agreements', agreementRoutes);
 app.use('/api/upload', uploadRoutes);
 
+app.get('/', (req, res) => res.json({ status: "Accord Backend Live", time: new Date() }));
+app.get('/health', (req, res) => res.status(200).send('OK'));
+
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
     console.log(`Accord backend running on port ${PORT}`);
