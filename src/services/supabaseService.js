@@ -5,9 +5,9 @@ const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_KEY;
 
 if(!SUPABASE_URL || !SUPABASE_KEY) {
-    console.warn("WARNING: Supabase URL or Key not set.");
+    throw new Error("SUPABASE_URL or SUPABASE_KEY is missing! Set them in the Render Environment Variables tab.");
 }
 
-const supabase = createClient(SUPABASE_URL || 'https://xyz.supabase.co', SUPABASE_KEY || 'dummy_key');
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 module.exports = supabase;
