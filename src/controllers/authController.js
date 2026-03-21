@@ -44,9 +44,43 @@ exports.verifyWallet = async (req, res) => {
             expiresIn: '7d' // Long session for better persistence
         });
         
-        return res.json({ token, address: user.wallet_address });
+        return res.json({ token, address: user.wallet_address, user });
     } catch (error) {
         console.error("Auth error:", error);
         return res.status(500).json({ error: error.message });
+    }
+};
+
+exports.getProfile = async (req, res) => {
+    try {
+        const { data: user, error } = await supabase
+            .from('users')
+            .select('*')
+            .eq('wallet_address', req.wallet.toLowerCase())
+            .single();
+        if (error) throw error;
+        res.json(user);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+};
+
+exports.updateProfile = async (req, res) => {
+    try {
+        const { name, bio, display_name } = req.body;
+        const { data, error } = await supabase
+            .from('users')
+            .update({ 
+                name: name || undefined, 
+                display_name: display_name || undefined,
+                bio: bio || undefined 
+            })
+            .eq('wallet_address', req.wallet.toLowerCase())
+            .select()
+            .single();
+        if (error) throw error;
+        res.json(data);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
     }
 };
