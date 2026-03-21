@@ -33,7 +33,8 @@ exports.getAgreement = async (req, res) => {
 
 exports.getAgreementsByWallet = async (req, res) => {
     try {
-        const wallet = req.params.addr.toLowerCase();
+        const wallet = (req.params.addr || req.wallet || "").toLowerCase();
+        if (!wallet) return res.status(400).json({ error: "No address" });
         
         const { data, error } = await supabase.from('agreements')
             .select('*')
