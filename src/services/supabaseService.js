@@ -4,28 +4,16 @@ require('dotenv').config();
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_KEY;
 
-let supabase;
-
 if (!SUPABASE_URL || !SUPABASE_KEY) {
-    console.warn("CRITICAL WARNING: SUPABASE_URL or SUPABASE_KEY is missing. Profile saving will NOT work, but the app will stay alive using a mock backend.");
-    
-    // Non-breaking Mock Client
-    supabase = {
-        from: () => ({
-            select: () => ({
-                eq: () => ({
-                    single: () => Promise.resolve({ data: null, error: null }),
-                    select: () => ({ single: () => Promise.resolve({ data: null, error: null }) })
-                }),
-                select: () => ({ eq: () => ({ single: () => Promise.resolve({ data: null, error: null }) }) })
-            }),
-            insert: () => ({ select: () => ({ single: () => Promise.resolve({ data: { id: 'mock' }, error: null }) }) }),
-            upsert: () => ({ select: () => ({ single: () => Promise.resolve({ data: { id: 'mock' }, error: null }) }) }),
-            update: () => ({ eq: () => ({ select: () => ({ single: () => Promise.resolve({ data: { id: 'mock' }, error: null }) }) }) })
-        })
-    };
-} else {
-    supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+    console.warn("SUPABASE_URL or SUPABASE_KEY is missing from environment. App will likely fail authenticated requests.");
+}
+
+const supabase = createClient(SUPABASE_URL || 'https://placeholder.supabase.co', SUPABASE_KEY || 'dummy_key');
+
+// Debugging (Safe logic to show prefixes only)
+if (SUPABASE_URL && SUPABASE_KEY) {
+    console.log(`Supabase initialized for: ${SUPABASE_URL.substring(0, 15)}...`);
+    console.log(`Key prefix: ${SUPABASE_KEY.substring(0, 6)}...`);
 }
 
 module.exports = supabase;
