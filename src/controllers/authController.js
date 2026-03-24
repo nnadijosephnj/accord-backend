@@ -1,6 +1,8 @@
 const jwt = require('jsonwebtoken');
 const supabase = require('../services/supabaseService');
+const pinata = require('../services/pinataService');
 const { ethers } = require('ethers');
+const { Readable } = require('stream');
 require('dotenv').config();
 
 exports.verifyWallet = async (req, res) => {
@@ -67,7 +69,7 @@ exports.getProfile = async (req, res) => {
 
 exports.updateProfile = async (req, res) => {
     try {
-        const { name, bio, display_name } = req.body;
+        const { name, bio, display_name, avatar_url } = req.body;
         const wallet = req.wallet.toLowerCase();
         
         // Build update object only with provided fields
@@ -75,6 +77,7 @@ exports.updateProfile = async (req, res) => {
         if (name !== undefined) updates.name = name;
         if (display_name !== undefined) updates.display_name = display_name;
         if (bio !== undefined) updates.bio = bio;
+        if (avatar_url !== undefined) updates.avatar_url = avatar_url;
 
         const { data, error } = await supabase
             .from('users')
@@ -91,6 +94,36 @@ exports.updateProfile = async (req, res) => {
         res.json(data);
     } catch (e) {
         console.error("UpdateProfile Catch:", e.message);
+        res.status(500).json({ error: e.message });
+    }
+};
+
+exports.uploadAvatar = async (req, res) => {
+    try {
+        if (!req.file) return res.status(400).json({ error: "No image uploaded" });
+
+        const wallet = req.wallet.toLowerCase();
+
+        // Stream file buffer to Pinata
+        const stream = Readable.from(req.file.buffer);
+        stream.path = req.file.originalname;
+        const response = await pinata.upload.stream(stream);
+
+        const avatar_url = `https://gateway.pinata.cloud/ipfs/${response.IpfsHash}`;
+
+        // Save to Supabase users table
+        const { data, error } = await supabase
+            .from('users')
+            .update({ avatar_url })
+            .eq('wallet_address', wallet)
+            .select()
+            .single();
+
+        if (error) throw error;
+
+        res.json({ avatar_url, user: data });
+    } catch (e) {
+        console.error("uploadAvatar error:", e.message);
         res.status(500).json({ error: e.message });
     }
 };
