@@ -1,6 +1,5 @@
 const pinata = require('../services/pinataService');
 const supabase = require('../services/supabaseService');
-const { Readable } = require('stream');
 
 exports.uploadFiles = async (req, res) => {
     try {
@@ -14,22 +13,17 @@ exports.uploadFiles = async (req, res) => {
         const uploadedData = [];
 
         for (const file of req.files) {
-            // Buffer to stream
-            const stream = Readable.from(file.buffer);
-            stream.path = file.originalname; 
-
-            // Upload directly to IPFS
-            const response = await pinata.upload.stream(stream);
+            // Convert multer buffer to Web API File (Pinata v2 SDK requires File object)
+            const webFile = new File([file.buffer], file.originalname, { type: file.mimetype });
+            const response = await pinata.upload.public.file(webFile);
             
-            // Assume first file is preview, second is final (in a real app, do better logic)
-            // Or expect frontend to specify the type
             const fileType = file.fieldname === 'preview' ? 'preview' : 'final';
             
             // Save metadata to supabase
             const { data, error } = await supabase.from('files').insert([{
                 agreement_id,
                 file_type: fileType,
-                ipfs_hash: response.IpfsHash,
+                ipfs_hash: response.cid,
                 file_name: file.originalname,
                 mime_type: file.mimetype,
                 uploaded_by: uploadWallet

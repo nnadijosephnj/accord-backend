@@ -2,7 +2,6 @@ const jwt = require('jsonwebtoken');
 const supabase = require('../services/supabaseService');
 const pinata = require('../services/pinataService');
 const { ethers } = require('ethers');
-const { Readable } = require('stream');
 require('dotenv').config();
 
 exports.verifyWallet = async (req, res) => {
@@ -104,12 +103,11 @@ exports.uploadAvatar = async (req, res) => {
 
         const wallet = req.wallet.toLowerCase();
 
-        // Stream file buffer to Pinata
-        const stream = Readable.from(req.file.buffer);
-        stream.path = req.file.originalname;
-        const response = await pinata.upload.stream(stream);
+        // Convert multer buffer to Web API File (Pinata v2 SDK requires File object)
+        const webFile = new File([req.file.buffer], req.file.originalname, { type: req.file.mimetype });
+        const response = await pinata.upload.public.file(webFile);
 
-        const avatar_url = `https://gateway.pinata.cloud/ipfs/${response.IpfsHash}`;
+        const avatar_url = `https://gateway.pinata.cloud/ipfs/${response.cid}`;
 
         // Save to Supabase users table
         const { data, error } = await supabase
