@@ -2,11 +2,15 @@ const supabase = require('../services/supabaseService');
 
 exports.createAgreement = async (req, res) => {
     try {
-        const { title, description, amount_usdt, max_revisions, deadline, client_wallet, contract_agreement_id } = req.body;
+        const { title, description, amount_usdt, amount, token_address, max_revisions, deadline, client_wallet, contract_agreement_id } = req.body;
         
+        // Support legacy frontend structure and new multi-token structure
+        const finalAmount = amount || amount_usdt;
+        const finalTokenAddress = token_address || process.env.USDT_CONTRACT_ADDRESS;
+
         const { data, error } = await supabase.from('agreements').insert([{
             title, description, freelancer_wallet: req.wallet, client_wallet: client_wallet.toLowerCase(),
-            amount_usdt, max_revisions, revision_count: 0, status: 'PENDING',
+            amount_usdt: finalAmount, token_address: finalTokenAddress, max_revisions, revision_count: 0, status: 'PENDING',
             contract_agreement_id,
             deadline: deadline ? new Date(deadline) : null
         }]).select();
