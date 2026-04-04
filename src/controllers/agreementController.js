@@ -29,6 +29,16 @@ exports.getAgreement = async (req, res) => {
             .eq('id', req.params.id).single();
         if (error) throw error;
         
+        // Security: Filter out final IPFS hashes until completed
+        if (data.status !== 'COMPLETED' && data.files) {
+            data.files = data.files.map(f => {
+                if (f.file_type === 'final') {
+                    return { ...f, ipfs_hash: 'HIDDEN_UNTIL_COMPLETED' };
+                }
+                return f;
+            });
+        }
+        
         res.json(data);
     } catch (e) {
         res.status(500).json({ error: e.message });
@@ -37,8 +47,8 @@ exports.getAgreement = async (req, res) => {
 
 exports.getAgreementsByWallet = async (req, res) => {
     try {
-        const wallet = (req.params.addr || req.wallet || "").toLowerCase();
-        if (!wallet) return res.status(400).json({ error: "No address" });
+        const wallet = req.wallet.toLowerCase();
+        if (!wallet) return res.status(401).json({ error: "Unauthorized" });
         
         const { data, error } = await supabase.from('agreements')
             .select('*')
@@ -54,7 +64,30 @@ exports.getAgreementsByWallet = async (req, res) => {
 
 exports.updateStatus = async (req, res) => {
     try {
-        const { status } = req.body; // Status: FUNDED, SUBMITTED, REVISION, COMPLETED, CANCELLED
+        const { status } = req.body;
+        const wallet = req.wallet.toLowerCase();
+        
+        // 1. Fetch current agreement to check permissions
+        const { data: agreement, error: fetchError } = await supabase
+            .from('agreements')
+            .select('*')
+            .eq('id', req.params.id)
+            .single();
+            
+        if (fetchError || !agreement) return res.status(404).json({ error: "Agreement not found" });
+
+        // 2. Simple Authorization: User must be a participant
+        const isClient = agreement.client_wallet.toLowerCase() === wallet;
+        const isFreelancer = agreement.freelancer_wallet.toLowerCase() === wallet;
+
+        if (!isClient && !isFreelancer) {
+            return res.status(403).json({ error: "Not authorized to update this agreement" });
+        }
+
+        // 3. Status Transition Rules (Loose but helpful)
+        // Only internal backend logic/contract events should ideally set these,
+        // but for this MVP we'll just ensure the caller is relevant.
+        
         const { data, error } = await supabase.from('agreements')
             .update({ status })
             .eq('id', req.params.id)

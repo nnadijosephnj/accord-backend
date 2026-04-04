@@ -8,14 +8,14 @@ exports.verifyWallet = async (req, res) => {
     try {
         const { address, signature, message } = req.body;
         
-        // In a real production app, you should verify the signature.
-        // For this build, we verify loosely since some wallets have different sign schemes.
-        // If message & signature are provided, verify them.
-        if (message && signature) {
-            const recoveredAddress = ethers.verifyMessage(message, signature);
-            if (recoveredAddress.toLowerCase() !== address.toLowerCase()) {
-                return res.status(401).json({ error: "Invalid signature" });
-            }
+        // Mandatory signature verification
+        if (!message || !signature) {
+            return res.status(401).json({ error: "Signature and message are required" });
+        }
+
+        const recoveredAddress = ethers.verifyMessage(message, signature);
+        if (recoveredAddress.toLowerCase() !== address.toLowerCase()) {
+            return res.status(401).json({ error: "Invalid signature" });
         }
 
         // Check if user exists in Supabase
