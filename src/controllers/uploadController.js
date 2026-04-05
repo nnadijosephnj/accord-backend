@@ -30,7 +30,7 @@ exports.uploadFiles = async (req, res) => {
             const webFile = new File([file.buffer], file.originalname, { type: file.mimetype });
             const response = await pinata.upload.public.file(webFile);
             
-            const fileType = file.fieldname === 'preview' ? 'preview' : 'final';
+            const fileType = req.body.file_type || (file.fieldname === 'preview' ? 'preview' : 'final');
             
             // Save metadata to supabase
             const { data, error } = await supabase.from('files').insert([{

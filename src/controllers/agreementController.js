@@ -2,14 +2,39 @@ const supabase = require('../services/supabaseService');
 
 exports.createAgreement = async (req, res) => {
     try {
-        const { title, description, amount_usdt, amount, token_address, max_revisions, deadline, client_wallet, contract_agreement_id } = req.body;
+        const {
+            title,
+            description,
+            amount_usdt,
+            amount,
+            token_address,
+            max_revisions,
+            deadline,
+            client_wallet,
+            freelancer_wallet,
+            contract_agreement_id
+        } = req.body;
         
         // Support legacy frontend structure and new multi-token structure
         const finalAmount = amount || amount_usdt;
         const finalTokenAddress = token_address || process.env.USDT_CONTRACT_ADDRESS;
+        const normalizedClientWallet = client_wallet?.toLowerCase();
+        const normalizedFreelancerWallet = freelancer_wallet?.toLowerCase() || req.wallet?.toLowerCase();
+        const requesterWallet = req.wallet?.toLowerCase();
+
+        if (!normalizedClientWallet || !normalizedFreelancerWallet) {
+            return res.status(400).json({ error: "Client and freelancer wallet addresses are required" });
+        }
+
+        if (requesterWallet !== normalizedClientWallet && requesterWallet !== normalizedFreelancerWallet) {
+            return res.status(403).json({ error: "Authenticated wallet must be a participant in the agreement" });
+        }
 
         const { data, error } = await supabase.from('agreements').insert([{
-            title, description, freelancer_wallet: req.wallet, client_wallet: client_wallet.toLowerCase(),
+            title,
+            description,
+            freelancer_wallet: normalizedFreelancerWallet,
+            client_wallet: normalizedClientWallet,
             amount_usdt: finalAmount, token_address: finalTokenAddress, max_revisions, revision_count: 0, status: 'PENDING',
             contract_agreement_id,
             deadline: deadline ? new Date(deadline) : null
